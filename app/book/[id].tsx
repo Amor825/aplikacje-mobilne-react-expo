@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, ChevronRight, Star, Trash2, UserMinus, UserPlus, Users } from 'lucide-react-native';
+import { ArrowLeft, ChevronRight, Pencil, Star, Trash2, UserMinus, UserPlus, Users } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator, Alert,
@@ -133,9 +133,15 @@ export default function BookDetailsScreen() {
       {
         text: 'Usuń', style: 'destructive', onPress: async () => {
           if (!user) return;
-          const { error } = await supabase.from('books').delete().eq('id', id).eq('user_id', user.id);
+          const { error, count } = await supabase
+            .from('books')
+            .delete({ count: 'exact' })
+            .eq('id', id)
+            .eq('user_id', user.id);
           if (error) {
-            Alert.alert('Błąd', 'Nie udało się usunąć książki. Spróbuj ponownie.');
+            Alert.alert('Błąd usuwania', error.message);
+          } else if (count === 0) {
+            Alert.alert('Błąd', 'Brak uprawnień do usunięcia tej książki.\n\nSprawdź polityki RLS w Supabase (tabela books, operacja DELETE).');
           } else {
             router.back();
           }
@@ -161,9 +167,14 @@ export default function BookDetailsScreen() {
             <ArrowLeft size={22} color={Colors.gold} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Szczegóły</Text>
-          <TouchableOpacity onPress={handleDelete} style={styles.backBtn}>
-            <Trash2 size={20} color={Colors.error} />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity onPress={() => router.push(`/book/edit/${id}`)} style={styles.backBtn}>
+              <Pencil size={18} color={Colors.gold} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleDelete} style={styles.backBtn}>
+              <Trash2 size={20} color={Colors.error} />
+            </TouchableOpacity>
+          </View>
         </Animated.View>
 
         {/* Book info card */}
