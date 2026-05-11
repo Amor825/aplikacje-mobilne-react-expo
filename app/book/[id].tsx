@@ -60,7 +60,7 @@ export default function BookDetailsScreen() {
   const handleRate = async (newRating: number) => {
     if (!book || book.status !== 'finished' || ratingLoading) return;
     setRatingLoading(true);
-    const { error } = await supabase.from('books').update({ rating: newRating }).eq('id', book.id);
+    const { error } = await supabase.from('books').update({ rating: newRating }).eq('id', book.id).eq('user_id', user!.id);
     if (!error) {
       setBook({ ...book, rating: newRating });
     }
@@ -132,8 +132,13 @@ export default function BookDetailsScreen() {
       { text: 'Anuluj', style: 'cancel' },
       {
         text: 'Usuń', style: 'destructive', onPress: async () => {
-          await supabase.from('books').delete().eq('id', id);
-          router.back();
+          if (!user) return;
+          const { error } = await supabase.from('books').delete().eq('id', id).eq('user_id', user.id);
+          if (error) {
+            Alert.alert('Błąd', 'Nie udało się usunąć książki. Spróbuj ponownie.');
+          } else {
+            router.back();
+          }
         },
       },
     ]);

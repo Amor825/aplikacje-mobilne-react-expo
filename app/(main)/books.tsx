@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { LogOut, Search, Star } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -133,6 +133,10 @@ export default function BooksScreen() {
   }, [user, filter]);
 
   useEffect(() => { fetchBooks(); }, [fetchBooks]);
+
+  useFocusEffect(
+    useCallback(() => { fetchBooks(); }, [fetchBooks])
+  );
 
   const handleLogout = async () => {
     try {
