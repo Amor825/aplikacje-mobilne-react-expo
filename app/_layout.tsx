@@ -1,6 +1,6 @@
 import 'react-native-reanimated';
 import 'react-native-url-polyfill/auto';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { supabase } from '../lib/supabase';
@@ -11,10 +11,12 @@ export default function RootLayout() {
   const { session, setSession } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      setInitialized(true);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -25,13 +27,14 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
+    if (!initialized || !segments.length) return;
     const inAuthGroup = segments[0] === '(auth)';
     if (!session && !inAuthGroup) {
       router.replace('/(auth)/login');
     } else if (session && inAuthGroup) {
       router.replace('/(main)/books');
     }
-  }, [session, segments]);
+  }, [session, segments, initialized]);
 
   return (
     <>

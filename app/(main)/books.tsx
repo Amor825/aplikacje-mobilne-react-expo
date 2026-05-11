@@ -135,7 +135,11 @@ export default function BooksScreen() {
   useEffect(() => { fetchBooks(); }, [fetchBooks]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch {
+      useAuthStore.getState().setSession(null);
+    }
   };
 
   const thisYear = new Date().getFullYear();
