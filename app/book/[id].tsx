@@ -80,20 +80,34 @@ export default function BookDetailsScreen() {
     if (bookData) {
       const { data: sameBooks } = await supabase
         .from('books')
-        .select('user_id, rating, date_added, profiles!books_user_id_fkey(username)')
+        .select('user_id, rating, date_added')
         .eq('title', bookData.title)
         .eq('author', bookData.author)
         .eq('status', 'finished')
         .neq('user_id', user.id);
 
-      setOthers(
-        (sameBooks ?? []).map((r: any) => ({
-          user_id: r.user_id,
-          username: r.profiles?.username ?? 'Nieznany',
-          rating: r.rating,
-          date_added: r.date_added,
-        }))
-      );
+      if (sameBooks && sameBooks.length > 0) {
+        const userIds = sameBooks.map((b: any) => b.user_id);
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, username')
+          .in('id', userIds);
+
+        const profileMap = new Map(
+          (profilesData ?? []).map((p: any) => [p.id, p.username])
+        );
+
+        setOthers(
+          sameBooks.map((r: any) => ({
+            user_id: r.user_id,
+            username: profileMap.get(r.user_id) ?? 'Nieznany',
+            rating: r.rating,
+            date_added: r.date_added,
+          }))
+        );
+      } else {
+        setOthers([]);
+      }
     }
 
     setFollowed(new Set((followsData ?? []).map((f: any) => f.following_id)));
@@ -103,11 +117,12 @@ export default function BookDetailsScreen() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const toggleFollow = async (targetId: string) => {
+    if (!user) return;
     if (followed.has(targetId)) {
-      await supabase.from('user_follows').delete().eq('follower_id', user!.id).eq('following_id', targetId);
+      await supabase.from('user_follows').delete().eq('follower_id', user.id).eq('following_id', targetId);
       setFollowed((prev) => { const next = new Set(prev); next.delete(targetId); return next; });
     } else {
-      await supabase.from('user_follows').insert({ follower_id: user!.id, following_id: targetId });
+      await supabase.from('user_follows').insert({ follower_id: user.id, following_id: targetId });
       setFollowed((prev) => new Set(prev).add(targetId));
     }
   };
@@ -215,7 +230,7 @@ export default function BookDetailsScreen() {
                   onPress={() => router.push(`/user/${reader.user_id}`)}
                 >
                   <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>{reader.username[0].toUpperCase()}</Text>
+                    <Text style={styles.avatarText}>{(reader.username?.[0] ?? '?').toUpperCase()}</Text>
                   </View>
                   <View>
                     <Text style={styles.readerName}>{reader.username}</Text>
